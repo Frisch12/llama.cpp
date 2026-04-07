@@ -292,6 +292,13 @@ static vk_device_architecture get_device_architecture(const vk::PhysicalDevice& 
         }
 
         if (!amd_shader_core_properties || !integer_dot_product || !subgroup_size_control) {
+            // VK_AMD_shader_core_properties is not available in MoltenVK on macOS.
+            // AMD GCN GPUs (e.g. Vega 56/64 via eGPU) use 64-wide wavefronts but
+            // will be misidentified as OTHER (32-wide) without this fix.
+            if (!amd_shader_core_properties && props.vendorID == VK_VENDOR_ID_AMD) {
+                GGML_LOG_DEBUG("ggml_vulkan: VK_AMD_shader_core_properties unavailable (MoltenVK?), assuming AMD_GCN for %s\n", props.deviceName.data());
+                return vk_device_architecture::AMD_GCN;
+            }
             return vk_device_architecture::OTHER;
         }
 
